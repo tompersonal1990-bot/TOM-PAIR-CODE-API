@@ -1,0 +1,21 @@
+{
+  "name": "tom-pair-api",
+  "version": "1.0.0",
+  "description": "TOM PRIME X BOT - Official Pairing Code API with Telegram Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "@hapi/boom": "^10.0.1",
+    "express": "^4.19.2",
+    "pino": "^8.21.0",
+    "node-cache": "^5.1.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "axios": "^1.8.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
