@@ -92,8 +92,8 @@ app.get('/pair', async (req, res) => {
         });
 
         if (!sock.authState.creds.registered) {
-            await delay(3000); // Standard server handshake sync delay
-            let code = await sock.requestPairingCode(phone);
+    await delay(6000); // ৩০০০ থেকে বাড়িয়ে ৬০০০ (৬ সেকেন্ড) কর
+    let code = await sock.requestPairingCode(phone);
             code = code?.match(/.{1,4}/g)?.join("-") || code;
 
             if (!res.headersSent) {
