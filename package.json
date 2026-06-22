@@ -1,0 +1,14 @@
+{
+  "name": "whatsapp-pairing-bot",
+  "version": "1.0.0",
+  "description": "Telegram to WhatsApp Pairing Code Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "pino": "^9.0.0"
+  }
+}
