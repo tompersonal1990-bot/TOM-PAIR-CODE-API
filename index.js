@@ -159,13 +159,85 @@ app.get('/pair', async (req, res) => {
             },
             markOnlineOnConnect: false,
             syncFullHistory: false,
+const express = require('express');
+const pino = require('pino');
+const fs = require('fs');
+const path = require('path');
+const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
+const zlib = require('zlib');
+
+// Global anti-crash protections
+process.on('uncaughtException', (err) => console.error('🛑 Exception:', err.message));
+process.on('unhandledRejection', (err) => console.error('🛑 Rejection:', err));
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// === 🤖 TELEGRAM BOT CONFIGURATION ===
+const TELEGRAM_TOKEN = '8803390153:AAGEV-YVCVB7BIOohcUWUAqGULqUjmUbAfs'; 
+const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
+
+// গ্লোবাল মেমোরি অ্যালোকেশন এবং চ্যাট আইডি ট্র্যাকিং
+global.waConnections = global.waConnections || {};
+global.tgChats = global.tgChats || {}; 
+
+app.get('/', (req, res) => {
+    res.send('👑 TOM PRIME X - PAIRING SERVER IS LIVE & CLEAN ✅');
+});
+
+// === 📲 WHATSAPP PAIRING CODE API ROUTE ===
+app.get('/pair', async (req, res) => {
+    let phone = req.query.phone;
+    let chatId = req.query.chatId; 
+    
+    if (!phone) return res.json({ status: false, error: "Please provide a phone number!" });
+
+    phone = phone.replace(/[^0-9]/g, '');
+    
+    if (chatId) {
+        global.tgChats[phone] = chatId; 
+    }
+    
+    const sessionsDir = path.join(process.cwd(), 'sessions');
+    if (!fs.existsSync(sessionsDir)) {
+        fs.mkdirSync(sessionsDir, { recursive: true });
+    }
+    const sessionPath = path.join(sessionsDir, phone);
+
+    try {
+        // Dynamic Node Require for Baileys
+        const baileys = require('@whiskeysockets/baileys');
+        const makeWASocket = baileys.default || baileys;
+        const { useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay, Browsers } = baileys;
+
+        if (global.waConnections[phone]) {
+            try {
+                global.waConnections[phone].logout();
+                global.waConnections[phone].end();
+            } catch (e) {}
+            delete global.waConnections[phone];
+        }
+
+        let { version } = await fetchLatestBaileysVersion();
+        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+
+        const sock = makeWASocket({
+            version,
+            logger: pino({ level: 'silent' }),
+            printQRInTerminal: false,
+            browser: Browsers.macOS("Safari"), 
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
+            },
+            markOnlineOnConnect: false,
+            syncFullHistory: false,
             downloadHistory: false,
         });
 
-        // Store inside global context to prevent garbage collection and freeze bugs
         global.waConnections[phone] = sock;
 
-        // Critical event listener to save creds continuously
         sock.ev.on('creds.update', async () => {
             await saveCreds();
         });
@@ -178,12 +250,10 @@ app.get('/pair', async (req, res) => {
                 console.log(`✅ Session built successfully for: ${phone}`);
                 
                 try {
-                    // হোয়াটসঅ্যাপে কোড দেওয়ার সাথে সাথে creds.json রিড করে সেশন আইডি বানানো হচ্ছে
                     const credsPath = path.join(sessionPath, 'creds.json');
                     if (fs.existsSync(credsPath)) {
                         const credsData = fs.readFileSync(credsPath, 'utf-8');
                         
-                        // তোর দেওয়া বটের লজিক অনুযায়ী জিপ ও বেস৬৪ এনকোড করা হলো
                         const gzipData = zlib.gzipSync(credsData);
                         const base64Session = gzipData.toString('base64');
                         const finalSessionId = `TomBot!${base64Session}`;
@@ -206,7 +276,6 @@ app.get('/pair', async (req, res) => {
                     console.error('Session string generation error:', err.message);
                 }
 
-                // ক্লিনআপ রেফারেন্স
                 setTimeout(() => {
                     try { sock.logout(); } catch(e){}
                     if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true, force: true });
@@ -228,7 +297,7 @@ app.get('/pair', async (req, res) => {
         });
 
         if (!sock.authState.creds.registered) {
-            await delay(5000); // ক্লাউড হোস্টিংয়ের হ্যান্ডশেক সিঙ্কের জন্য ৫ সেকেন্ড ডিলে দিলাম
+            await delay(5000); 
             let code = await sock.requestPairingCode(phone);
             code = code?.match(/.{1,4}/g)?.join("-") || code;
 
@@ -271,7 +340,6 @@ bot.onText(/\/pair (.+)/, async (msg, match) => {
     await bot.sendMessage(chatId, `⏳ **+${phoneNumber}** নম্বরের জন্য পেয়ার কোড তৈরি হচ্ছে... একটু অপেক্ষা করুন।`);
 
     try {
-        // এক্সপ্রেস এপিআই রুটে চ্যাট আইডিসহ হিট করা হচ্ছে যেন পরে সেশন আইডি ব্যাক করা যায়
         const response = await axios.get(`http://localhost:${PORT}/pair?phone=${phoneNumber}&chatId=${chatId}`);
         const data = response.data;
 
