@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "WhatsApp Pairing Server with Telegram Bot Support",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
